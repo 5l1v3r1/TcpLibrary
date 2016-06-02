@@ -10,6 +10,7 @@ using TcpLibrary.Packet;
 
 namespace TcpLibrary.Common
 {
+    public delegate void DisconnectEventHandler(object sender, string errmsg);
     public class SimpleTcpClient<T> : IDisposable
     {
 

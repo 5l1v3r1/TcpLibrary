@@ -54,8 +54,8 @@ namespace TcpLibrary
         private void Stc_Disconnect(object sender, string errmsg)
         {
             var stc = sender as SimpleTcpClient<T>;
-            Clients.Remove(stc);
             OnClientClosing?.Invoke(stc);
+            Clients.Remove(stc);
         }
 
         private void Stc_ReceivePacket(SimpleTcpClient<T> sender, MainPacket<T> packet)

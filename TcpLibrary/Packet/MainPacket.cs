@@ -6,7 +6,6 @@ namespace TcpLibrary.Packet
     {
         public MainPacket(T commandType, IPacket packet)
         {
-            int val = 0;
             if (commandType.GetHashCode() > -1)
             {
                 CommandType = commandType;

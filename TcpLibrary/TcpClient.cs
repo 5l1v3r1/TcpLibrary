@@ -8,12 +8,11 @@ using TcpLibrary.Converter;
 namespace TcpLibrary
 {
 
-    public delegate void DisconnectEventHandler(object sender, string errmsg);
+
 
     public class TcpClient<T> : IDisposable
     {
         public delegate void MessageEventHandler(object sender, T commandType, byte[] snp);
-        
 
         public event DisconnectEventHandler Disconnect;
         public event DisconnectEventHandler Connected;
@@ -27,6 +26,7 @@ namespace TcpLibrary
         {
             return new IPEndPoint(IPAddress.Parse((ServerAddr)), ServerPort);
         }
+        public bool IsConnected { get { return Client == null ? false : Client.Socket.Connected; } }
         /// <summary>
         /// 发起连接
         /// </summary>
