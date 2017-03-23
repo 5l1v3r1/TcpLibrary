@@ -39,6 +39,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CommandAttr.cs" />
     <Compile Include="Common\SimpleTcpClient.cs" />
     <Compile Include="Common\Utils.cs" />
     <Compile Include="Converter\DefaultConvert.cs" />

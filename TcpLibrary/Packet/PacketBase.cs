@@ -154,7 +154,8 @@ namespace TcpLibrary.Packet
                                     bytes,
                                     item.Value,
                                     ref seek,
-                                    (Encoding)type.GetField("_Encoding", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).GetValue(p))
+                                    (Encoding)type.GetField("_Encoding",
+                                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).GetValue(p))
                                 );
                         break;
                     default:
@@ -171,6 +172,9 @@ namespace TcpLibrary.Packet
     }
     public class PacketBase
     {
+        /// <summary>
+        /// 设置数据包编解码使用的字符编码类型
+        /// </summary>
         public Encoding _Encoding = Encoding.ASCII;
         public PacketBase() { }
         /// <summary>
