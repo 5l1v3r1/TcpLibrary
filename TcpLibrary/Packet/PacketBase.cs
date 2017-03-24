@@ -197,7 +197,6 @@ namespace TcpLibrary.Packet
                         if (tempstrbytes.Length > 0) Data.AddRange(tempstrbytes);
                         break;
                     case "Int32":
-                    case "NetCommand":
                         var tempint = (int)fi.GetValue(this);
                         bytes.AddRange(BitConverter.GetBytes(tempint));
                         break;
@@ -215,6 +214,11 @@ namespace TcpLibrary.Packet
                             tempbytesbytes = (byte[])fi.GetValue(this);
                         else if (fi.FieldType.Name.Contains("Packet"))
                             tempbytesbytes = ((IPacket)fi.GetValue(this)).GetBytes();
+                        else if (fi.FieldType.BaseType == typeof(Enum))
+                        {
+                            var enumint = (int)fi.GetValue(this);
+                            bytes.AddRange(BitConverter.GetBytes(enumint));
+                        }
                         bytes.AddRange(BitConverter.GetBytes(tempbytesbytes.Length));
                         if (tempbytesbytes.Length > 0) Data.AddRange(tempbytesbytes);
                         break;
