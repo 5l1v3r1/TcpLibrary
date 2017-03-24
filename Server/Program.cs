@@ -35,6 +35,7 @@ namespace Server
             var packet = new TextPacket();
             PacketHelper.CreatePacketFromBytes(message.Packet.Data, ref packet);
             Console.WriteLine(packet.Text);
+            message.Socket.Send(message.Packet);
         }
     }
 }
