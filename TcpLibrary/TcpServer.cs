@@ -9,7 +9,7 @@ using TcpLibrary.Packet;
 namespace TcpLibrary
 {
     
-    public class TcpServer<T> : TcpBase<T>
+    public class TcpServer<T> : TcpBase<T>, IDisposable
     {
         public delegate void ClientComingEventHandler(SimpleTcpClient<T> sock);
         public delegate void ClientClosingEventHandler(SimpleTcpClient<T> sock);
@@ -40,7 +40,7 @@ namespace TcpLibrary
             TcpClient s2 = s.EndAcceptTcpClient(ar);
             SimpleTcpClient<T> stc = new SimpleTcpClient<T>();
             stc.Socket = s2;
-            stc.Disconnect += Stc_Disconnect;
+            stc.Disconnect += disconnect;
             stc.ReceivePacket += Swith;
             stc.Ns = s2.GetStream();
             stc.StartRecv();
@@ -49,12 +49,16 @@ namespace TcpLibrary
             s.BeginAcceptTcpClient(new AsyncCallback(Listen_Callback), s);
         }
 
-        private void Stc_Disconnect(object sender, string errmsg)
+        private void disconnect(object sender, string errmsg)
         {
             var stc = sender as SimpleTcpClient<T>;
             OnClientClosing?.Invoke(stc);
             Clients.Remove(stc);
         }
-        
+
+        public void Dispose()
+        {
+            Clients.Clear();
+        }
     }
 }
