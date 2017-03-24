@@ -4,19 +4,19 @@ using System.Net;
 using TcpLibrary.Common;
 using TcpLibrary.Packet;
 using TcpLibrary.Converter;
+using TcpLibrary;
 
 namespace TcpLibrary
 {
 
 
 
-    public class TcpClient<T> : IDisposable
+    public class TcpClient<T> : TcpBase<T>, IDisposable
     {
         public delegate void MessageEventHandler(object sender, T commandType, byte[] snp);
 
         public event DisconnectEventHandler Disconnect;
         public event DisconnectEventHandler Connected;
-        public event MessageEventHandler Message;
 
         SimpleTcpClient<T> Client = null;
         public string Name;
@@ -68,14 +68,6 @@ namespace TcpLibrary
         public void Send(MainPacket<T> packet)
         {
             Client.Send(packet);
-        }
-        private void Swith(SimpleTcpClient<T> sender, MainPacket<T> packet)
-        {
-            try
-            {
-                Message?.Invoke(this, packet.CommandType, packet.Data);
-            }
-            catch (Exception ex) { }
         }
 
         public void Dispose()

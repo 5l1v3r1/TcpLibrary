@@ -9,15 +9,13 @@ using TcpLibrary.Packet;
 namespace TcpLibrary
 {
     
-    public class TcpServer<T>
+    public class TcpServer<T> : TcpBase<T>
     {
         public delegate void ClientComingEventHandler(SimpleTcpClient<T> sock);
         public delegate void ClientClosingEventHandler(SimpleTcpClient<T> sock);
-        public delegate void MessageComingEventHandler(SimpleTcpClient<T> sock, MainPacket<T> packet);
 
         public event ClientComingEventHandler OnClientComing;
         public event ClientClosingEventHandler OnClientClosing;
-        public event MessageComingEventHandler OnMessageComing;
 
         private TcpListener TcpListen = null;
 
@@ -43,7 +41,7 @@ namespace TcpLibrary
             SimpleTcpClient<T> stc = new SimpleTcpClient<T>();
             stc.Socket = s2;
             stc.Disconnect += Stc_Disconnect;
-            stc.ReceivePacket += Stc_ReceivePacket;
+            stc.ReceivePacket += Swith;
             stc.Ns = s2.GetStream();
             stc.StartRecv();
             Clients.Add(stc);
@@ -57,10 +55,6 @@ namespace TcpLibrary
             OnClientClosing?.Invoke(stc);
             Clients.Remove(stc);
         }
-
-        private void Stc_ReceivePacket(SimpleTcpClient<T> sender, MainPacket<T> packet)
-        {
-            OnMessageComing(sender, packet);
-        }
+        
     }
 }
