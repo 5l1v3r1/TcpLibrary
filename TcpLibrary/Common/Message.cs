@@ -13,7 +13,7 @@ namespace TcpLibrary.Common
     {
         /// <summary>
         /// 信息源
-        /// </summary>
+        /// </summary>      
         public SimpleTcpClient<T> Socket { get; set; } = null;
         /// <summary>
         /// 信息正文

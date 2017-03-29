@@ -5,7 +5,7 @@ using System.Text;
 using TcpLibrary.Common;
 using TcpLibrary.Interface;
 using TcpLibrary.Packet;
-
+using System.Reflection;
 namespace TcpLibrary.Packet
 {
     public delegate void ReceivePacketEventHandler<T>(MainPacket<T> packet);
@@ -176,7 +176,80 @@ namespace TcpLibrary.Packet
         /// 设置数据包编解码使用的字符编码类型
         /// </summary>
         public Encoding _Encoding = Encoding.ASCII;
+
+        
         public PacketBase() { }
+
+
+        /// <summary>
+        /// 从比特流解析出数据包
+        /// </summary>
+        /// <typeparam name="T">数据包类型</typeparam>
+        /// <returns>数据包长度</returns>
+        /// <param name="bytes">比特流</param>
+        /// <param name="p">返回数据包</param>
+        public static IPacket CreatePacketFromBytes(byte[] bytes)
+        {
+            
+            Type type = .GetType();
+            ConstructorInfo ct1 = type.GetConstructor(Type.EmptyTypes);
+            object packet = ct1.Invoke(null);
+            int seek = 0;
+            int result = 0;
+            Dictionary<FieldInfo, int> sizeList = new Dictionary<FieldInfo, int>();
+            foreach (FieldInfo fi in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                if (fi.Name.StartsWith("_")) continue;
+                switch (fi.FieldType.Name)
+                {
+                    case "Int32":
+                    case "NetCommand":
+                        fi.SetValue(packet, Tools.ToInt32(bytes, ref seek));
+                        result += 4;
+                        break;
+                    case "Int64":
+                        fi.SetValue(packet, Tools.ToLong(bytes, ref seek));
+                        result += 8;
+                        break;
+                    default:
+                        sizeList.Add(fi, Tools.ToInt32(bytes, ref seek));
+                        result += 4;
+                        break;
+                }
+            }
+            foreach (var item in sizeList)
+            {
+                result += item.Value;
+                var fi = item.Key;
+                if (item.Value == 0) continue;
+                switch (fi.FieldType.Name)
+                {
+                    case "Byte[]":
+                        fi.SetValue(packet, Tools.SubBytes(bytes, item.Value, ref seek));
+                        break;
+                    case "String":
+                        fi.SetValue(packet,
+                            Tools.ToString(
+                                    bytes,
+                                    item.Value,
+                                    ref seek,
+                                    (Encoding)type.GetField("_Encoding",
+                                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).GetValue(packet))
+                                );
+                        break;
+                    default:
+                        if (fi.FieldType.Name.Contains("Packet"))
+                        {
+                            var c = fi.GetValue(packet);
+                            CreatePacketFromBytes(Tools.SubBytes(bytes, item.Value, ref seek));
+                        }
+                        break;
+                }
+            }
+            return (IPacket)packet;
+        }
+
+
         /// <summary>
         /// 获取数据包比特流
         /// </summary>
@@ -189,6 +262,10 @@ namespace TcpLibrary.Packet
             foreach (FieldInfo fi in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
                 if (fi.Name.StartsWith("_")) continue;
+                int length = 0;
+                byte[] sbytes = null;
+
+                
                 switch (fi.FieldType.Name)
                 {
                     case "String":
