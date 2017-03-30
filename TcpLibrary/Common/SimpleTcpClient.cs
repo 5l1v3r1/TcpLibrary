@@ -70,7 +70,8 @@ namespace TcpLibrary.Common
                 {
                     if (bytes <= 0)
                     {
-                        Disconnect?.Invoke(this, "");
+                        Disconnect?.Invoke(this, "Disconnect");
+                        Debug.WriteLine("Recv Switch Error: byte length is 0, Disconnect");
                         break;
                     }
                     try

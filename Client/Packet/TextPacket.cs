@@ -11,5 +11,6 @@ namespace Client.Packet
     {
         public TextPacket() { _Encoding = Encoding.UTF8; }
         public string Text { get; set; } = string.Empty;
+        public string[] Strs { get; set; } = new string[0];
     }
 }

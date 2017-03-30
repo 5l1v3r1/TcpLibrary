@@ -82,8 +82,7 @@ namespace TcpLibrary.Packet
         /// <param name="p">返回数据包</param>
         public static void CreatePacketFromBytes<T>(byte[] bytes, ref T p) where T : PacketBase, IPacket
         {
-            Type type = p.GetType();
-            p = (T)ObjectFactory.ToObjact(type, bytes, p._Encoding.HeaderName);
+            p = (T)ObjectFactory.ToObjact(p.GetType(), bytes, p._Encoding.HeaderName);
         }
     }
     public class PacketBase
@@ -92,9 +91,6 @@ namespace TcpLibrary.Packet
         /// 设置数据包编解码使用的字符编码类型
         /// </summary>
         public Encoding _Encoding = Encoding.ASCII;
-
-
-        public PacketBase() { }
 
         /// <summary>
         /// 获取数据包比特流

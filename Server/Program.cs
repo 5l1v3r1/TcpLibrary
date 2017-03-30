@@ -17,8 +17,14 @@ namespace Server
         {
             InitPacketFunc();
             server.OnClientComing += Server_OnClientComing;
+            server.OnClientClosing += Server_OnClientClosing;
             server.Start();
             Console.ReadLine();
+        }
+
+        private static void Server_OnClientClosing(SimpleTcpClient<NetCommand> sock)
+        {
+            Console.WriteLine("exiting");
         }
 
         private static void Server_OnClientComing(SimpleTcpClient<NetCommand> sock)

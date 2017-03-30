@@ -42,6 +42,18 @@ namespace TcpLibrary
             return Connect(iep.Address.ToString(), iep.Port);
         }
 
+        public bool RetryConnect(int count = 1)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                if (Connect(ServerInfo()))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         public bool Connect(string hostName, int port)
         {
             if (Client != null)
