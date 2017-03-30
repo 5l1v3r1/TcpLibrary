@@ -5,73 +5,99 @@ using System.Text;
 
 namespace TcpLibrary.Common
 {
-    public class ObjectFactory
+    public static class ObjectFactory
     {
         public const string DefaultEncoding = "UTF-8";
-        public delegate byte[] ExporterFunc(object obj, out int length, string coding = DefaultEncoding);
+        public delegate byte[] ExporterFunc(object obj, string coding = DefaultEncoding);
         public delegate object ImporterFunc(byte[] input, string coding = DefaultEncoding);
+        public delegate bool ExcludeFunc(FieldInfo fi);
+
+        private static bool IsInited = false;
 
         private static Dictionary<Type, ExporterFunc> base_exporters_table;
 
         private static Dictionary<Type, ImporterFunc> base_importers_table;
 
-        public ObjectFactory()
+        private static List<ExcludeFunc> base_excludes_list;
+
+
+        public static void Init(bool must = false)
         {
+            if (IsInited && !must) return;
             base_exporters_table = new Dictionary<Type, ExporterFunc>();
             base_importers_table = new Dictionary<Type, ImporterFunc>();
+            base_excludes_list = new List<ExcludeFunc>();
             registerExporters();
             registerImporters();
+            registerExcludes();
         }
-        private void registerExporters()
+
+        private static void registerExcludes()
         {
-            RegisterExporter(typeof(byte[]), delegate (object obj, out int length, string coding)
+            RegisterExclude(delegate (FieldInfo fi)
             {
-                length = ((byte[])obj).Length;
+                if (fi.Name.StartsWith("_"))
+                    return true;
+                else return false;
+            });
+        }
+
+        public static void RegisterExclude(ExcludeFunc func)
+        {
+            if (base_excludes_list.Contains(func))
+                return;
+            base_excludes_list.Add(func);
+        }
+
+        private static bool isExclude(FieldInfo fi)
+        {
+            foreach (var item in base_excludes_list)
+            {
+                if (item(fi))
+                    return true;
+            }
+            return false;
+        }
+        private static void registerExporters()
+        {
+            RegisterExporter(typeof(byte[]), delegate (object obj, string coding)
+            {
                 return (byte[])obj;
             });
-            RegisterExporter(typeof(string), delegate (object obj, out int length, string coding)
+            RegisterExporter(typeof(string), delegate (object obj, string coding)
             {
-                var bytes = Encoding.GetEncoding(coding).GetBytes(obj.ToString());
-                length = bytes.Length;
-                return bytes;
+                return Encoding.GetEncoding(coding).GetBytes(obj.ToString());
             });
-            RegisterExporter(typeof(int), delegate (object obj, out int length, string coding)
+            RegisterExporter(typeof(int), delegate (object obj, string coding)
             {
-                length = sizeof(int);
                 return BitConverter.GetBytes((int)obj);
             });
-            RegisterExporter(typeof(long), delegate (object obj, out int length, string coding)
+            RegisterExporter(typeof(long), delegate (object obj, string coding)
             {
-                length = sizeof(long);
                 return BitConverter.GetBytes((long)obj);
             });
-            RegisterExporter(typeof(bool), delegate (object obj, out int length, string coding)
+            RegisterExporter(typeof(bool), delegate (object obj, string coding)
             {
-                length = sizeof(bool);
                 return BitConverter.GetBytes((bool)obj);
             });
-            RegisterExporter(typeof(double), delegate (object obj, out int length, string coding)
+            RegisterExporter(typeof(double), delegate (object obj, string coding)
             {
-                length = sizeof(double);
                 return BitConverter.GetBytes((double)obj);
             });
-            RegisterExporter(typeof(float), delegate (object obj, out int length, string coding)
+            RegisterExporter(typeof(float), delegate (object obj, string coding)
             {
-                length = sizeof(float);
                 return BitConverter.GetBytes((float)obj);
             });
-            RegisterExporter(typeof(short), delegate (object obj, out int length, string coding)
+            RegisterExporter(typeof(short), delegate (object obj, string coding)
             {
-                length = sizeof(short);
                 return BitConverter.GetBytes((short)obj);
             });
-            RegisterExporter(typeof(ulong), delegate (object obj, out int length, string coding)
+            RegisterExporter(typeof(ulong), delegate (object obj, string coding)
             {
-                length = sizeof(ulong);
                 return BitConverter.GetBytes((ulong)obj);
             });
         }
-        private void registerImporters()
+        private static void registerImporters()
         {
             RegisterImporter(typeof(byte[]), delegate (byte[] bytes, string coding)
             {
@@ -110,22 +136,24 @@ namespace TcpLibrary.Common
                 return BitConverter.ToUInt64(bytes, 0);
             });
         }
-        public void RegisterImporter(Type type, ImporterFunc func)
+        public static void RegisterImporter(Type type, ImporterFunc func)
         {
             if (base_importers_table.ContainsKey(type))
                 base_importers_table.Remove(type);
             base_importers_table.Add(type, func);
         }
-        public void RegisterExporter(Type type, ExporterFunc func)
+        public static void RegisterExporter(Type type, ExporterFunc func)
         {
             if (base_exporters_table.ContainsKey(type))
                 base_exporters_table.Remove(type);
             base_exporters_table.Add(type, func);
         }
-        public object ToObjact(Type type, byte[] bytes, string coding = DefaultEncoding)
+        public static object ToObjact(Type type, byte[] bytes, string coding = DefaultEncoding)
         {
             if (base_importers_table.ContainsKey(type))
                 return base_importers_table[type](bytes, coding);
+            else if (type.IsEnum)
+                return base_importers_table[typeof(int)](bytes, coding);
             else if (type.IsArray)
             {
                 var count = BitConverter.ToInt32(bytes, 0);
@@ -139,38 +167,83 @@ namespace TcpLibrary.Common
                 }
                 return list;
             }
+            else if (type.IsClass)
+            {
+                Dictionary<FieldInfo, int> sizeList = new Dictionary<FieldInfo, int>();
+                var cons = Activator.CreateInstance(type);
+                FieldInfo[] tfis = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                var count = 0;
+                List<FieldInfo> fis = new List<FieldInfo>();
+                foreach (var item in tfis)
+                {
+                    if (isExclude(item)) continue;
+                    fis.Add(item);
+                    count++;
+                }
+                int seek = count * 4;
+                for (int i = 0; i < count; i++)
+                {
+                    var fi = fis[i];
+                    var packlen = BitConverter.ToInt32(bytes, 4 * i);
+                    if (fi.FieldType == typeof(int) || fi.FieldType.IsEnum)
+                        fi.SetValue(cons, packlen);
+                    else
+                    {
+                        fi.SetValue(cons, ToObjact(fi.FieldType, Tools.SubBytes(bytes, packlen, seek)));
+                        seek += packlen;
+                    }
+                }
+                return cons;
+            }
             else
             {
                 return null;
             }
         }
-        public byte[] ToBytes(Type type, object obj, out int length, string coding = DefaultEncoding)
+        public static byte[] ToBytes(Type type, object obj, string coding = DefaultEncoding)
         {
             if (base_exporters_table.ContainsKey(type))
-                return base_exporters_table[type](obj, out length, coding);
+                return base_exporters_table[type](obj, coding);
+            else if (type.IsEnum)
+                return base_exporters_table[typeof(int)](obj, coding);
             else if (type.IsArray)
             {
                 var count = ((Array)obj).Length;
-                length = 0;
                 List<byte> bytes = new List<byte>();
                 List<byte> content = new List<byte>();
                 bytes.AddRange(BitConverter.GetBytes(count));
-                length += (count + 1) * 4;
                 foreach (var item in (Array)obj)
                 {
-                    var tlength = 0;
                     byte[] sbytes;
-                    sbytes = ToBytes(item.GetType(), item, out tlength);
-                    bytes.AddRange(BitConverter.GetBytes(tlength));
+                    sbytes = ToBytes(item.GetType(), item);
+                    bytes.AddRange(BitConverter.GetBytes(sbytes.Length));
                     content.AddRange(sbytes);
-                    length += tlength;
                 }
                 bytes.AddRange(content);
                 return bytes.ToArray();
             }
+            else if (type.IsClass)
+            {
+                List<byte> header = new List<byte>();
+                List<byte> data = new List<byte>();
+                foreach (FieldInfo fi in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+                {
+                    if (isExclude(fi)) continue;
+                    var bytes = ToBytes(fi.FieldType, fi.GetValue(obj), coding);
+                    if (fi.FieldType == typeof(int) || fi.FieldType.IsEnum)
+                        header.AddRange(bytes);
+                    else
+                    {
+                        header.AddRange(BitConverter.GetBytes(bytes.Length));
+                        data.AddRange(bytes);
+                    }
+
+                }
+                header.AddRange(data);
+                return header.ToArray();
+            }
             else
             {
-                length = -1;
                 return null;
             }
         }

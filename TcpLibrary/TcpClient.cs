@@ -22,6 +22,11 @@ namespace TcpLibrary
         public string Name;
         public string ServerAddr = string.Empty;
         public int ServerPort = 0;
+
+        public TcpClient()
+        {
+            ObjectFactory.Init();
+        }
         public IPEndPoint ServerInfo()
         {
             return new IPEndPoint(IPAddress.Parse((ServerAddr)), ServerPort);

@@ -24,6 +24,7 @@ namespace TcpLibrary
         public TcpServer(int port)
         {
             TcpListen = new TcpListener(IPAddress.Any, port);
+            ObjectFactory.Init();
         }
         public void Start()
         {

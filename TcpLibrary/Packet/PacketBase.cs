@@ -5,13 +5,11 @@ using System.Text;
 using TcpLibrary.Common;
 using TcpLibrary.Interface;
 using TcpLibrary.Packet;
-using System.Reflection;
 namespace TcpLibrary.Packet
 {
     public delegate void ReceivePacketEventHandler<T>(MainPacket<T> packet);
     public class PacketMaker<T> : IDisposable
     {
-
         public event ReceivePacketEventHandler<T> ReceivePacket;
         int bufflong = 0;
         List<byte> buff = new List<byte>();
@@ -28,7 +26,7 @@ namespace TcpLibrary.Packet
             if (bufflong == 0 && bytes.Length >= 8)　　　 //如果没有还未接收完的数据
             {
                 MainPacket<T> mp = new MainPacket<T>();
-                pos += PacketHelper.GetPacketLen(Tools.SubBytes(bytes, pos), ref mp);            //获取数据包长度
+                pos += PacketHelper.GetPacketLen(Tools.SubBytes(bytes, pos));            //获取数据包长度
                 if (pos > bytes.Length)                                                   //如果数据包长度大于缓冲区长度，说明包不完整，继续接收不解析
                 {
                     bufflong = pos - bytes.Length;                                        //设置未接受数据长度为 数据包长度-当前缓冲区长度
@@ -70,39 +68,9 @@ namespace TcpLibrary.Packet
     }
     public static class PacketHelper
     {
-
-        public static int GetPacketLen<T>(byte[] bytes, ref T p)
+        public static int GetPacketLen(byte[] bytes)
         {
-            Type type = p.GetType();
-            int seek = 0;
-            int result = 0;
-            Dictionary<FieldInfo, int> sizeList = new Dictionary<FieldInfo, int>();
-
-            foreach (FieldInfo fi in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
-            {
-                if (fi.Name.StartsWith("_")) continue;
-                switch (fi.FieldType.Name)
-                {
-                    case "Int32":
-                    case "NetCommand":
-                        seek += 4;
-                        result += 4;
-                        break;
-                    case "Int64":
-                        seek += 8;
-                        result += 8;
-                        break;
-                    default:
-                        sizeList.Add(fi, Tools.ToInt32(bytes, ref seek));
-                        result += 4;
-                        break;
-                }
-            }
-            foreach (var item in sizeList)
-            {
-                result += item.Value;
-            }
-            return result;
+            return 8 + BitConverter.ToInt32(bytes, 4);
         }
 
         /// <summary>
@@ -112,62 +80,10 @@ namespace TcpLibrary.Packet
         /// <returns>数据包长度</returns>
         /// <param name="bytes">比特流</param>
         /// <param name="p">返回数据包</param>
-        public static int CreatePacketFromBytes<T>(byte[] bytes, ref T p)
+        public static void CreatePacketFromBytes<T>(byte[] bytes, ref T p) where T : PacketBase, IPacket
         {
             Type type = p.GetType();
-            int seek = 0;
-            int result = 0;
-            Dictionary<FieldInfo, int> sizeList = new Dictionary<FieldInfo, int>();
-            foreach (FieldInfo fi in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
-            {
-                if (fi.Name.StartsWith("_")) continue;
-                switch (fi.FieldType.Name)
-                {
-                    case "Int32":
-                    case "NetCommand":
-                        fi.SetValue(p, Tools.ToInt32(bytes, ref seek));
-                        result += 4;
-                        break;
-                    case "Int64":
-                        fi.SetValue(p, Tools.ToLong(bytes, ref seek));
-                        result += 8;
-                        break;
-                    default:
-                        sizeList.Add(fi, Tools.ToInt32(bytes, ref seek));
-                        result += 4;
-                        break;
-                }
-            }
-            foreach (var item in sizeList)
-            {
-                result += item.Value;
-                var fi = item.Key;
-                if (item.Value == 0) continue;
-                switch (fi.FieldType.Name)
-                {
-                    case "Byte[]":
-                        fi.SetValue(p, Tools.SubBytes(bytes, item.Value, ref seek));
-                        break;
-                    case "String":
-                        fi.SetValue(p,
-                            Tools.ToString(
-                                    bytes,
-                                    item.Value,
-                                    ref seek,
-                                    (Encoding)type.GetField("_Encoding",
-                                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).GetValue(p))
-                                );
-                        break;
-                    default:
-                        if (fi.FieldType.Name.Contains("Packet"))
-                        {
-                            var c = fi.GetValue(p);
-                            CreatePacketFromBytes<Object>(Tools.SubBytes(bytes, item.Value, ref seek), ref c);
-                        }
-                        break;
-                }
-            }
-            return result;
+            p = (T)ObjectFactory.ToObjact(type, bytes, p._Encoding.HeaderName);
         }
     }
     public class PacketBase
@@ -177,78 +93,8 @@ namespace TcpLibrary.Packet
         /// </summary>
         public Encoding _Encoding = Encoding.ASCII;
 
-        
+
         public PacketBase() { }
-
-
-        /// <summary>
-        /// 从比特流解析出数据包
-        /// </summary>
-        /// <typeparam name="T">数据包类型</typeparam>
-        /// <returns>数据包长度</returns>
-        /// <param name="bytes">比特流</param>
-        /// <param name="p">返回数据包</param>
-        public static IPacket CreatePacketFromBytes(byte[] bytes)
-        {
-            
-            Type type = .GetType();
-            ConstructorInfo ct1 = type.GetConstructor(Type.EmptyTypes);
-            object packet = ct1.Invoke(null);
-            int seek = 0;
-            int result = 0;
-            Dictionary<FieldInfo, int> sizeList = new Dictionary<FieldInfo, int>();
-            foreach (FieldInfo fi in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
-            {
-                if (fi.Name.StartsWith("_")) continue;
-                switch (fi.FieldType.Name)
-                {
-                    case "Int32":
-                    case "NetCommand":
-                        fi.SetValue(packet, Tools.ToInt32(bytes, ref seek));
-                        result += 4;
-                        break;
-                    case "Int64":
-                        fi.SetValue(packet, Tools.ToLong(bytes, ref seek));
-                        result += 8;
-                        break;
-                    default:
-                        sizeList.Add(fi, Tools.ToInt32(bytes, ref seek));
-                        result += 4;
-                        break;
-                }
-            }
-            foreach (var item in sizeList)
-            {
-                result += item.Value;
-                var fi = item.Key;
-                if (item.Value == 0) continue;
-                switch (fi.FieldType.Name)
-                {
-                    case "Byte[]":
-                        fi.SetValue(packet, Tools.SubBytes(bytes, item.Value, ref seek));
-                        break;
-                    case "String":
-                        fi.SetValue(packet,
-                            Tools.ToString(
-                                    bytes,
-                                    item.Value,
-                                    ref seek,
-                                    (Encoding)type.GetField("_Encoding",
-                                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).GetValue(packet))
-                                );
-                        break;
-                    default:
-                        if (fi.FieldType.Name.Contains("Packet"))
-                        {
-                            var c = fi.GetValue(packet);
-                            CreatePacketFromBytes(Tools.SubBytes(bytes, item.Value, ref seek));
-                        }
-                        break;
-                }
-            }
-            return (IPacket)packet;
-        }
-
 
         /// <summary>
         /// 获取数据包比特流
@@ -256,53 +102,7 @@ namespace TcpLibrary.Packet
         /// <returns>比特流</returns>
         public byte[] GetBytes()
         {
-            List<byte> bytes = new List<byte>();
-            List<byte> Data = new List<byte>();
-            Type type = this.GetType();
-            foreach (FieldInfo fi in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
-            {
-                if (fi.Name.StartsWith("_")) continue;
-                int length = 0;
-                byte[] sbytes = null;
-
-                
-                switch (fi.FieldType.Name)
-                {
-                    case "String":
-                        var tempstrbytes = Tools.ToBytes(fi.GetValue(this).ToString(), _Encoding);
-                        bytes.AddRange(BitConverter.GetBytes(tempstrbytes.Length));
-                        if (tempstrbytes.Length > 0) Data.AddRange(tempstrbytes);
-                        break;
-                    case "Int32":
-                        var tempint = (int)fi.GetValue(this);
-                        bytes.AddRange(BitConverter.GetBytes(tempint));
-                        break;
-                    case "Byte":
-                        var tempbytebytes = (byte)fi.GetValue(this);
-                        bytes.Add(tempbytebytes);
-                        break;
-                    case "Int64":
-                        var templong = (long)fi.GetValue(this);
-                        bytes.AddRange(BitConverter.GetBytes(templong));
-                        break;
-                    default:
-                        var tempbytesbytes = new byte[] { };
-                        if (fi.FieldType.Name == "Byte[]")
-                            tempbytesbytes = (byte[])fi.GetValue(this);
-                        else if (fi.FieldType.Name.Contains("Packet"))
-                            tempbytesbytes = ((IPacket)fi.GetValue(this)).GetBytes();
-                        else if (fi.FieldType.BaseType == typeof(Enum))
-                        {
-                            var enumint = (int)fi.GetValue(this);
-                            bytes.AddRange(BitConverter.GetBytes(enumint));
-                        }
-                        bytes.AddRange(BitConverter.GetBytes(tempbytesbytes.Length));
-                        if (tempbytesbytes.Length > 0) Data.AddRange(tempbytesbytes);
-                        break;
-                }
-            }
-            bytes.AddRange(Data);
-            return bytes.ToArray();
+            return ObjectFactory.ToBytes(this.GetType(), this, _Encoding.HeaderName);
         }
     }
 }

@@ -11,31 +11,41 @@ namespace TestFunc
     {
         static void Main(string[] args)
         {
-            ObjectFactory of = new ObjectFactory();
-            var len = 0;
+            ObjectFactory.Init();
             byte[] sresult = null;
 
 
             int[] int_inttest = new int[] { 100000, 5556, 55964636, 54564, 2131, 0, 3333, 66, 644, 444 };
-            sresult = of.ToBytes(typeof(int[]), int_inttest, out len);
+            sresult = ObjectFactory.ToBytes(typeof(int[]), int_inttest);
             int[] int_outtest = null;
-            int_outtest = (int[])of.ToObjact(typeof(int[]), sresult);
+            int_outtest = (int[])ObjectFactory.ToObjact(typeof(int[]), sresult);
 
             string[] str_inttest = new string[] { "asfdasfasfas", "阿斯蒂芬阿三豆腐块阿斯弗", "发哈可是大后方恐惧哈市", "啊开始就好付款计划v卡收费的卡上的机会附加费感觉哈是官方的环境啊是的高房价哈斯夺冠翻噶实践活动覆盖较好啊是固定火箭发射轨道" };
-            sresult = of.ToBytes(typeof(string[]), str_inttest, out len);
+            sresult = ObjectFactory.ToBytes(typeof(string[]), str_inttest);
             string[] str_outtest = null;
-            str_outtest = (string[])of.ToObjact(typeof(string[]), sresult);
+            str_outtest = (string[])ObjectFactory.ToObjact(typeof(string[]), sresult);
 
-            TestPacket tp = new TestPacket();
-            tp.test1 = 999999;
-            byte[] tempb = tp.GetBytes();
+            bool[] bool_inttest = new bool[] { true, false, true, false, true, true, true, true, false, false, false, false };
+            sresult = ObjectFactory.ToBytes(typeof(bool[]), bool_inttest);
 
-            TestPacket tp1 = TestPacket.;
-            tp1.CreatePacketFromBytes(tempb);
+
+            MainPacket<cc> tp = new MainPacket<cc>();
+            tp.CommandType = cc.v1;
+            tp.Data = sresult;
+            var bytes = ObjectFactory.ToBytes(tp.GetType(), tp);
+
+            object obj = ObjectFactory.ToObjact(tp.GetType(), bytes);
+            // tp1.CreatePacketFromBytes(tempb);
         }
     }
     public class TestPacket : PacketBase, IPacket
     {
         public int test1 { get; set; } = 0;
+        public string str { get; set; } = string.Empty;
+
+    }
+    public enum cc
+    {
+        v1 = 1, v2 = 2
     }
 }
