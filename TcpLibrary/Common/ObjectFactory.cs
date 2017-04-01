@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Reflection;
 using System.Text;
 
@@ -96,6 +97,32 @@ namespace TcpLibrary.Common
             {
                 return BitConverter.GetBytes((ulong)obj);
             });
+            RegisterExporter(typeof(Version), delegate (object obj, string coding)
+            {
+                byte[] bytes = new byte[16];
+                Version ver = (Version)obj;
+                Buffer.BlockCopy(new int[] { ver.Major, ver.Minor, ver.Build, ver.Revision }, 0, bytes, 0, 16);
+                return bytes;
+            });
+            RegisterExporter(new Type[] { typeof(Size), typeof(Point) }, delegate (object obj, string coding)
+            {
+                byte[] bytes = new byte[8];
+                Point point = (Point)obj;
+                Buffer.BlockCopy(new int[] { point.X, point.Y }, 0, bytes, 0, 8);
+                return bytes;
+            });
+            RegisterExporter(typeof(Color), delegate (object obj, string coding)
+            {
+                var rgba = ((Color)obj).ToArgb();
+                return BitConverter.GetBytes(rgba);
+            });
+            RegisterExporter(typeof(TimeSpan), delegate (object obj, string coding)
+            {
+                byte[] bytes = new byte[8];
+                TimeSpan timespan = (TimeSpan)obj;
+                Buffer.BlockCopy(new long[] { timespan.Ticks }, 0, bytes, 0, 8);
+                return bytes;
+            });
         }
         private static void registerImporters()
         {
@@ -135,12 +162,45 @@ namespace TcpLibrary.Common
             {
                 return BitConverter.ToUInt64(bytes, 0);
             });
+            RegisterImporter(typeof(Version), delegate (byte[] bytes, string coding)
+            {
+                int[] parts = new int[4];
+                Buffer.BlockCopy(bytes, 0, parts, 0, 16);
+                return new Version(parts[0], parts[1], parts[2], parts[3]);
+            });
+            RegisterImporter(new Type[] { typeof(Size), typeof(Point) }, delegate (byte[] bytes, string coding)
+            {
+                int[] parts = new int[2];
+                Buffer.BlockCopy(bytes, 0, parts, 0, 8);
+                return new Point(parts[0], parts[1]);
+            });
+            RegisterImporter(typeof(Color), delegate (byte[] bytes, string coding)
+            {
+                var rgba = BitConverter.ToInt32(bytes, 0);
+                return Color.FromArgb(rgba);
+            });
+            RegisterImporter(typeof(TimeSpan), delegate (byte[] bytes, string coding)
+            {
+                long[] parts = new long[1];
+                Buffer.BlockCopy(bytes, 0, parts, 0, 8);
+                return new TimeSpan(parts[0]);
+            });
+        }
+        public static void RegisterImporter(Type[] types, ImporterFunc func)
+        {
+            foreach (var item in types)
+                RegisterImporter(item, func);
         }
         public static void RegisterImporter(Type type, ImporterFunc func)
         {
             if (base_importers_table.ContainsKey(type))
                 base_importers_table.Remove(type);
             base_importers_table.Add(type, func);
+        }
+        public static void RegisterExporter(Type[] types, ExporterFunc func)
+        {
+            foreach (var item in types)
+                RegisterExporter(item, func);
         }
         public static void RegisterExporter(Type type, ExporterFunc func)
         {
@@ -237,7 +297,6 @@ namespace TcpLibrary.Common
                         header.AddRange(BitConverter.GetBytes(bytes.Length));
                         data.AddRange(bytes);
                     }
-
                 }
                 header.AddRange(data);
                 return header.ToArray();
