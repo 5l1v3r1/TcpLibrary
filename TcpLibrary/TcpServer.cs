@@ -9,7 +9,7 @@ using TcpLibrary.Packet;
 namespace TcpLibrary
 {
     
-    public class TcpServer<T> : TcpBase<T>, IDisposable
+    public class TcpServer<T> : TcpBase<T>, IDisposable where T : struct
     {
         public delegate void ClientComingEventHandler(SimpleTcpClient<T> sock);
         public delegate void ClientClosingEventHandler(SimpleTcpClient<T> sock);

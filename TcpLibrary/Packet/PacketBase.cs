@@ -7,8 +7,8 @@ using TcpLibrary.Interface;
 using TcpLibrary.Packet;
 namespace TcpLibrary.Packet
 {
-    public delegate void ReceivePacketEventHandler<T>(MainPacket<T> packet);
-    public class PacketMaker<T> : IDisposable
+    public delegate void ReceivePacketEventHandler<T>(MainPacket<T> packet) where T : struct; 
+    public class PacketMaker<T> : IDisposable where T : struct
     {
         public event ReceivePacketEventHandler<T> ReceivePacket;
         int bufflong = 0;

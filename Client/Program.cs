@@ -17,7 +17,7 @@ namespace Client
         {
             InitPacketFunc();
             client.Connect(new IPEndPoint(IPAddress.Loopback, 9999));
-            client.Send(new MainPacket<NetCommand>(NetCommand.Text, new TextPacket() { Text = "test",Strs = new string[] { "asdfhas","啊上雕刻技法哈萨克发货卡很疯狂啊伤口缝合伤口啊贺卡设计的哈收到回复卡仕达"} }));
+            client.Send(new MainPacket<NetCommand>(NetCommand.none, new TextPacket() { Text = "test",Strs = new string[] { "asdfhas","啊上雕刻技法哈萨克发货卡很疯狂啊伤口缝合伤口啊贺卡设计的哈收到回复卡仕达"} }));
             client.Disconnect += Client_Disconnect;
             Console.ReadLine();
         }

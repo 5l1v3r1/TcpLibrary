@@ -11,7 +11,7 @@ using TcpLibrary.Packet;
 namespace TcpLibrary.Common
 {
     public delegate void DisconnectEventHandler(object sender, string errmsg);
-    public class SimpleTcpClient<T> : IDisposable
+    public class SimpleTcpClient<T> : IDisposable where T : struct
     {
 
         public delegate void ReceivePacketEventHandler(SimpleTcpClient<T> sender, MainPacket<T> packet);
@@ -22,7 +22,11 @@ namespace TcpLibrary.Common
         public int Port = 0;
         public event ReceivePacketEventHandler ReceivePacket;
         public event DisconnectEventHandler Disconnect;
-        public object Tag = null;
+
+        /// <summary>
+        /// 附加数据
+        /// </summary>
+        public object Tag { get; set; } = null;
         public IConvert Convert;
         public int BufferLength = 2048;
         public SimpleTcpClient() : this(TcpConfig.Convert) { }
@@ -97,17 +101,11 @@ namespace TcpLibrary.Common
         {
             packet.Data = Convert.Encode(packet.Data);
             var bytesSendData = packet.GetBytes();
-            try
+            if (Ns == null) throw new Exception("is not connected.");
+            lock (Ns)
             {
-                lock (Ns)
-                {
-                    Ns.Write(bytesSendData, 0, bytesSendData.Length);
-                    Ns.Flush();
-                }
-            }
-            catch (Exception ce)
-            {
-                Debug.WriteLine("Send Error:" + ce.Message);
+                Ns.Write(bytesSendData, 0, bytesSendData.Length);
+                Ns.Flush();
             }
         }
         public void Dispose()

@@ -7,6 +7,7 @@ namespace Client.Common
 {
     public enum NetCommand
     {
-       Text = 1
+        none = -1,
+        Text = 1
     }
 }

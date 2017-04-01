@@ -9,7 +9,7 @@ namespace TcpLibrary.Common
     /// 接收到的信息
     /// </summary>
     /// <typeparam name="T">命令列举类型</typeparam>
-    public class Message<T>
+    public class Message<T> where T : struct
     {
         /// <summary>
         /// 信息源

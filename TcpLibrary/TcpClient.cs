@@ -11,7 +11,7 @@ namespace TcpLibrary
 
 
 
-    public class TcpClient<T> : TcpBase<T>, IDisposable
+    public class TcpClient<T> : TcpBase<T>, IDisposable where T : struct
     {
         public delegate void MessageEventHandler(object sender, T commandType, byte[] snp);
 

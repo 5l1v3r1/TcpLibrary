@@ -6,7 +6,7 @@ using TcpLibrary.Packet;
 
 namespace TcpLibrary
 {
-    public class TcpBase<T>
+    public class TcpBase<T> where T : struct
     {
         private Dictionary<T, Action<Message<T>>> CommandRouter = new Dictionary<T, Action<Message<T>>>();
         public void RegAction(T type, Action<Message<T>> func)
