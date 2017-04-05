@@ -87,6 +87,15 @@ namespace TcpLibrary
             Client.Send(packet);
         }
 
+        /// <summary>
+        /// 发送数据包
+        /// </summary>
+        /// <param name="packet"></param>
+        public void Send(T commandtype, IPacket packet)
+        {
+            Client.Send(new MainPacket<T>(commandtype, packet));
+        }
+
         public void Dispose()
         {
             Client.Dispose();

@@ -43,7 +43,7 @@ namespace TcpLibrary
             stc.Socket = s2;
             stc.Disconnect += disconnect;
             stc.ReceivePacket += Swith;
-            stc.Ns = s2.GetStream();
+            stc.ns = s2.GetStream();
             stc.StartRecv();
             Clients.Add(stc);
             OnClientComing?.Invoke(stc);
