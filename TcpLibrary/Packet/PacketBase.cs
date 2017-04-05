@@ -22,7 +22,14 @@ namespace TcpLibrary.Packet
             int pos = 0;
             if (bytes.Length == 0) return;
             if (bufflong < 0) { bufflong = 0; buff.Clear(); }    //重置掉无效的长度
-            if (bytes.Length < 8 && bufflong > 8) { buff.AddRange(bytes); bufflong = 8 - bytes.Length; return; }
+            if (bytes.Length < 8) {
+                buff.AddRange(bytes);
+                if (buff.Count < 8)
+                {
+                    bufflong = 8 - buff.Count;
+                    return;
+                }
+            }
             if (bufflong == 0 && bytes.Length >= 8)　　　 //如果没有还未接收完的数据
             {
                 MainPacket<T> mp = new MainPacket<T>();
