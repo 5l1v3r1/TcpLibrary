@@ -81,6 +81,7 @@ namespace TcpLibrary.Common
             packet.Data = Convert.Encode(packet.Data);
             var bytesSendData = packet.GetBytes();
             if (ns == null) throw new Exception("is not connected.");
+            if (!ns.CanWrite) throw new Exception("stream can't write!");
             lock (ns)
             {
                 ns.Write(bytesSendData, 0, bytesSendData.Length);
