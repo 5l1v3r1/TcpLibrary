@@ -4,24 +4,29 @@ using System.Net;
 using TcpLibrary.Common;
 using TcpLibrary.Packet;
 using TcpLibrary.Converter;
+using TcpLibrary;
 
 namespace TcpLibrary
 {
 
 
 
-    public class TcpClient<T> : IDisposable
+    public class TcpClient<T> : TcpBase<T>, IDisposable where T : struct
     {
         public delegate void MessageEventHandler(object sender, T commandType, byte[] snp);
 
         public event DisconnectEventHandler Disconnect;
         public event DisconnectEventHandler Connected;
-        public event MessageEventHandler Message;
 
         SimpleTcpClient<T> Client = null;
         public string Name;
         public string ServerAddr = string.Empty;
         public int ServerPort = 0;
+
+        public TcpClient()
+        {
+            ObjectFactory.Init();
+        }
         public IPEndPoint ServerInfo()
         {
             return new IPEndPoint(IPAddress.Parse((ServerAddr)), ServerPort);
@@ -35,6 +40,18 @@ namespace TcpLibrary
         public bool Connect(IPEndPoint iep)
         {
             return Connect(iep.Address.ToString(), iep.Port);
+        }
+
+        public bool RetryConnect(int count = 1)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                if (Connect(ServerInfo()))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         public bool Connect(string hostName, int port)
@@ -69,13 +86,14 @@ namespace TcpLibrary
         {
             Client.Send(packet);
         }
-        private void Swith(SimpleTcpClient<T> sender, MainPacket<T> packet)
+
+        /// <summary>
+        /// 发送数据包
+        /// </summary>
+        /// <param name="packet"></param>
+        public void Send(T commandtype, IPacket packet)
         {
-            try
-            {
-                Message?.Invoke(this, packet.CommandType, packet.Data);
-            }
-            catch (Exception ex) { }
+            Client.Send(new MainPacket<T>(commandtype, packet));
         }
 
         public void Dispose()

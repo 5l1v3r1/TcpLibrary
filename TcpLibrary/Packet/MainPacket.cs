@@ -2,16 +2,12 @@
 
 namespace TcpLibrary.Packet
 {
-    public class MainPacket<T> : PacketBase, IPacket
+    public class MainPacket<T> : PacketBase, IPacket where T : struct
     {
         public MainPacket(T commandType, IPacket packet)
         {
-            if (commandType.GetHashCode() > -1)
-            {
-                CommandType = commandType;
-                Data = packet.GetBytes();
-            }
-            else throw new System.Exception("commandType Error");
+            CommandType = commandType;
+            Data = packet.GetBytes();
         }
         public MainPacket() { }
         public T CommandType;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -11,20 +12,25 @@ using TcpLibrary.Packet;
 namespace TcpLibrary.Common
 {
     public delegate void DisconnectEventHandler(object sender, string errmsg);
-    public class SimpleTcpClient<T> : IDisposable
+    public class SimpleTcpClient<T> : IDisposable where T : struct
     {
-
         public delegate void ReceivePacketEventHandler(SimpleTcpClient<T> sender, MainPacket<T> packet);
+
         private PacketMaker<T> PM = new PacketMaker<T>();
         public TcpClient Socket = null;
-        public NetworkStream Ns = null;
+        public NetworkStream ns = null;
         public string Hostname = string.Empty;
         public int Port = 0;
         public event ReceivePacketEventHandler ReceivePacket;
         public event DisconnectEventHandler Disconnect;
-        public object Tag = null;
-        public IConvert Convert;
         public int BufferLength = 2048;
+
+        /// <summary>
+        /// 附加数据
+        /// </summary>
+        public object Tag { get; set; } = null;
+        public IConvert Convert;
+
         public SimpleTcpClient() : this(TcpConfig.Convert) { }
         public SimpleTcpClient(IConvert convert) : this(string.Empty, 0, convert) { }
         public SimpleTcpClient(string host, int port, IConvert convert = null)
@@ -42,7 +48,7 @@ namespace TcpLibrary.Common
             try
             {
                 Socket.Connect(Hostname, Port);
-                Ns = Socket.GetStream();
+                ns = Socket.GetStream();
                 StartRecv();
             }
             catch
@@ -53,39 +59,17 @@ namespace TcpLibrary.Common
         }
         public void StartRecv()
         {
-            Tools.StartThread(new ThreadStart(Recv));
-        }
-        private void Recv()
-        {
-            while (true)
+            Tools.StartThread(new ThreadStart(delegate ()
             {
-                byte[] recvBytes = new byte[BufferLength];
-                int bytes = 0;
                 try
                 {
-                    bytes = Ns.Read(recvBytes, 0, BufferLength);
-                }
-                catch { }
-                try
-                {
-                    if (bytes <= 0)
+                    do
                     {
-                        Disconnect?.Invoke(this, "");
-                        break;
-                    }
-                    try
-                    {
-                        PM.Switch((Tools.SubBytes(recvBytes, bytes, 0)));
-                    }
-                    catch (Exception ex) { Debug.WriteLine("Recv Switch Error:" + ex.Message); }
+                        PM.Switch(ns);
+                    } while (true);
                 }
-                catch (Exception ex)
-                {
-                    Disconnect?.Invoke(this, ex.ToString());
-                    break;
-                }
-
-            }
+                catch (Exception ex) { Disconnect(this, "Recv Error"); Console.WriteLine(ex); }
+            }));
         }
         private void PM_ReceivePacket(MainPacket<T> packet)
         {
@@ -96,24 +80,19 @@ namespace TcpLibrary.Common
         {
             packet.Data = Convert.Encode(packet.Data);
             var bytesSendData = packet.GetBytes();
-            try
+            if (ns == null) throw new Exception("is not connected.");
+            if (!ns.CanWrite) throw new Exception("stream can't write!");
+            lock (ns)
             {
-                lock (Ns)
-                {
-                    Ns.Write(bytesSendData, 0, bytesSendData.Length);
-                    Ns.Flush();
-                }
-            }
-            catch (Exception ce)
-            {
-                Debug.WriteLine("Send Error:" + ce.Message);
+                ns.Write(bytesSendData, 0, bytesSendData.Length);
+                ns.Flush();
             }
         }
         public void Dispose()
         {
-            Socket?.Client.Shutdown(SocketShutdown.Both);
+            if (Socket?.Client.Connected == true)
+                Socket?.Client.Shutdown(SocketShutdown.Both);
             Socket = null;
-            PM.Dispose();
         }
     }
 }

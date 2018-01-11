@@ -9,15 +9,13 @@ using TcpLibrary.Packet;
 namespace TcpLibrary
 {
     
-    public class TcpServer<T>
+    public class TcpServer<T> : TcpBase<T>, IDisposable where T : struct
     {
         public delegate void ClientComingEventHandler(SimpleTcpClient<T> sock);
         public delegate void ClientClosingEventHandler(SimpleTcpClient<T> sock);
-        public delegate void MessageComingEventHandler(SimpleTcpClient<T> sock, MainPacket<T> packet);
 
         public event ClientComingEventHandler OnClientComing;
         public event ClientClosingEventHandler OnClientClosing;
-        public event MessageComingEventHandler OnMessageComing;
 
         private TcpListener TcpListen = null;
 
@@ -26,6 +24,7 @@ namespace TcpLibrary
         public TcpServer(int port)
         {
             TcpListen = new TcpListener(IPAddress.Any, port);
+            ObjectFactory.Init();
         }
         public void Start()
         {
@@ -42,25 +41,25 @@ namespace TcpLibrary
             TcpClient s2 = s.EndAcceptTcpClient(ar);
             SimpleTcpClient<T> stc = new SimpleTcpClient<T>();
             stc.Socket = s2;
-            stc.Disconnect += Stc_Disconnect;
-            stc.ReceivePacket += Stc_ReceivePacket;
-            stc.Ns = s2.GetStream();
+            stc.Disconnect += disconnect;
+            stc.ReceivePacket += Swith;
+            stc.ns = s2.GetStream();
             stc.StartRecv();
             Clients.Add(stc);
             OnClientComing?.Invoke(stc);
             s.BeginAcceptTcpClient(new AsyncCallback(Listen_Callback), s);
         }
 
-        private void Stc_Disconnect(object sender, string errmsg)
+        private void disconnect(object sender, string errmsg)
         {
             var stc = sender as SimpleTcpClient<T>;
             OnClientClosing?.Invoke(stc);
             Clients.Remove(stc);
         }
 
-        private void Stc_ReceivePacket(SimpleTcpClient<T> sender, MainPacket<T> packet)
+        public void Dispose()
         {
-            OnMessageComing(sender, packet);
+            Clients.Clear();
         }
     }
 }
