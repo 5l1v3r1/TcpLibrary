@@ -34,14 +34,12 @@ namespace Server
 
         public static void InitPacketFunc()
         {
-            server.RegAction(NetCommand.Text, TextMessage);
+            server.RegAction<TextPacket>(NetCommand.Text, TextMessage);
         }
-        public static void TextMessage(Message<NetCommand> message)
+        public static void TextMessage(Message<NetCommand, TextPacket> message)
         {
-            var packet = new TextPacket();
-            PacketHelper.CreatePacketFromBytes(message.Packet.Data, ref packet);
-            Console.WriteLine(packet.Text);
-            message.Socket.Send(message.Packet);
+            Console.WriteLine(message.Packet.Text);
+            message.Socket.Send(new MainPacket<NetCommand>(NetCommand.Text, message.Packet));
         }
     }
 }

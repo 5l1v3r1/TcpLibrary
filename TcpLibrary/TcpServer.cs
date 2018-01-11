@@ -42,7 +42,7 @@ namespace TcpLibrary
             SimpleTcpClient<T> stc = new SimpleTcpClient<T>();
             stc.Socket = s2;
             stc.Disconnect += disconnect;
-            stc.ReceivePacket += Swith;
+            stc.ReceivePacket += Switch;
             stc.ns = s2.GetStream();
             stc.StartRecv();
             Clients.Add(stc);

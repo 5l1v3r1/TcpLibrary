@@ -29,13 +29,12 @@ namespace Client
 
         public static void InitPacketFunc()
         {
-            client.RegAction(NetCommand.Text, TextMessage);
+            client.RegAction<TextPacket>(NetCommand.Text, TextMessage);
         }
-        public static void TextMessage(Message<NetCommand> message)
+        public static void TextMessage(Message<NetCommand,TextPacket> message)
         {
-            var packet = new TextPacket();
-            PacketHelper.CreatePacketFromBytes(message.Packet.Data, ref packet);
-            Console.WriteLine(packet.Text);
+            Console.WriteLine(message.Packet.Text);
+            message.Socket.Send(new MainPacket<NetCommand>(NetCommand.Text, message.Packet));
         }
     }
 }

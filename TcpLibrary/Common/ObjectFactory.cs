@@ -19,6 +19,8 @@ namespace TcpLibrary.Common
 
         private static Dictionary<Type, ImporterFunc> base_importers_table;
 
+        private static Dictionary<Type, FieldInfo[]> base_fieldinfo_table;
+
         private static List<ExcludeFunc> base_excludes_list;
 
 
@@ -27,6 +29,7 @@ namespace TcpLibrary.Common
             if (IsInited && !must) return;
             base_exporters_table = new Dictionary<Type, ExporterFunc>();
             base_importers_table = new Dictionary<Type, ImporterFunc>();
+            base_fieldinfo_table = new Dictionary<Type, FieldInfo[]>();
             base_excludes_list = new List<ExcludeFunc>();
             registerExporters();
             registerImporters();
@@ -231,7 +234,7 @@ namespace TcpLibrary.Common
             {
                 Dictionary<FieldInfo, int> sizeList = new Dictionary<FieldInfo, int>();
                 var cons = Activator.CreateInstance(type);
-                FieldInfo[] tfis = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                FieldInfo[] tfis = getFields(type);
                 var count = 0;
                 List<FieldInfo> fis = new List<FieldInfo>();
                 foreach (var item in tfis)
@@ -286,7 +289,7 @@ namespace TcpLibrary.Common
             {
                 List<byte> header = new List<byte>();
                 List<byte> data = new List<byte>();
-                foreach (FieldInfo fi in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+                foreach (FieldInfo fi in getFields(type))
                 {
                     if (isExclude(fi)) continue;
                     var bytes = ToBytes(fi.FieldType, fi.GetValue(obj), coding);
@@ -305,6 +308,15 @@ namespace TcpLibrary.Common
             {
                 return null;
             }
+        }
+        private static FieldInfo[] getFields(Type type)
+        {
+            if (!base_fieldinfo_table.ContainsKey(type))
+            {
+                var tfis = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                base_fieldinfo_table.Add(type, tfis);
+            }
+            return base_fieldinfo_table[type];
         }
     }
 }

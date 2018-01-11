@@ -63,7 +63,7 @@ namespace TcpLibrary
             ServerAddr = hostName;
             ServerPort = port;
             Client = new SimpleTcpClient<T>(hostName, port);
-            Client.ReceivePacket += Swith;
+            Client.ReceivePacket += Switch;
             Client.Disconnect += Client_Disconnect;
             if (Client.Connect())
             {
