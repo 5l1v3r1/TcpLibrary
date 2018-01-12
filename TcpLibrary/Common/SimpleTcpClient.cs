@@ -65,10 +65,17 @@ namespace TcpLibrary.Common
                 {
                     do
                     {
-                        PM.Switch(ns);
+                        if (Socket.Connected)
+                            PM.Switch(ns);
                     } while (true);
                 }
-                catch (Exception ex) { Disconnect(this, "Recv Error"); Console.WriteLine(ex); }
+                catch (Exception ex)
+                {
+                    Disconnect(this, "Recv Error");
+#if DEBUG
+                    Console.WriteLine(ex);
+#endif
+                }
             }));
         }
         private void PM_ReceivePacket(MainPacket<T> packet)

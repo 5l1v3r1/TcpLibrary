@@ -24,12 +24,12 @@ namespace Server
 
         private static void Server_OnClientClosing(SimpleTcpClient<NetCommand> sock)
         {
-            Console.WriteLine("exiting");
+            //Console.WriteLine("exiting");
         }
 
         private static void Server_OnClientComing(SimpleTcpClient<NetCommand> sock)
         {
-            Console.WriteLine("comeming");
+            //Console.WriteLine("comeming");
         }
 
         public static void InitPacketFunc()
@@ -38,7 +38,7 @@ namespace Server
         }
         public static void TextMessage(Message<NetCommand, TextPacket> message)
         {
-            Console.WriteLine(message.Packet.Text);
+            //Console.WriteLine(message.Packet.Text);
             message.Socket.Send(new MainPacket<NetCommand>(NetCommand.Text, message.Packet));
         }
     }

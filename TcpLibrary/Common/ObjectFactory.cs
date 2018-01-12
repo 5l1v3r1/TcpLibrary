@@ -19,21 +19,25 @@ namespace TcpLibrary.Common
 
         private static Dictionary<Type, ImporterFunc> base_importers_table;
 
-        private static Dictionary<Type, FieldInfo[]> base_fieldinfo_table;
+        private static Dictionary<Type, IList<FieldInfo>> base_fieldinfo_table;
 
         private static List<ExcludeFunc> base_excludes_list;
 
-
+        private static object Locker = new object();
         public static void Init(bool must = false)
         {
             if (IsInited && !must) return;
-            base_exporters_table = new Dictionary<Type, ExporterFunc>();
-            base_importers_table = new Dictionary<Type, ImporterFunc>();
-            base_fieldinfo_table = new Dictionary<Type, FieldInfo[]>();
-            base_excludes_list = new List<ExcludeFunc>();
-            registerExporters();
-            registerImporters();
-            registerExcludes();
+            lock (Locker)
+            {
+                base_exporters_table = new Dictionary<Type, ExporterFunc>();
+                base_importers_table = new Dictionary<Type, ImporterFunc>();
+                base_fieldinfo_table = new Dictionary<Type, IList<FieldInfo>>();
+                base_excludes_list = new List<ExcludeFunc>();
+                registerExporters();
+                registerImporters();
+                registerExcludes();
+                IsInited = true;
+            }
         }
 
         private static void registerExcludes()
@@ -55,15 +59,21 @@ namespace TcpLibrary.Common
 
         private static bool isExclude(FieldInfo fi)
         {
+            var IsExclude = false;
             foreach (var item in base_excludes_list)
             {
                 if (item(fi))
-                    return true;
+                    IsExclude = true;
+                if (IsExclude) break;
             }
-            return false;
+            return IsExclude;
         }
         private static void registerExporters()
         {
+            RegisterExporter(typeof(byte), delegate (object obj, string coding)
+            {
+                return new byte[] { (byte)obj };
+            });
             RegisterExporter(typeof(byte[]), delegate (object obj, string coding)
             {
                 return (byte[])obj;
@@ -129,6 +139,10 @@ namespace TcpLibrary.Common
         }
         private static void registerImporters()
         {
+            RegisterImporter(typeof(byte), delegate (byte[] bytes, string coding)
+            {
+                return bytes[0];
+            });
             RegisterImporter(typeof(byte[]), delegate (byte[] bytes, string coding)
             {
                 return (bytes);
@@ -234,15 +248,8 @@ namespace TcpLibrary.Common
             {
                 Dictionary<FieldInfo, int> sizeList = new Dictionary<FieldInfo, int>();
                 var cons = Activator.CreateInstance(type);
-                FieldInfo[] tfis = getFields(type);
-                var count = 0;
-                List<FieldInfo> fis = new List<FieldInfo>();
-                foreach (var item in tfis)
-                {
-                    if (isExclude(item)) continue;
-                    fis.Add(item);
-                    count++;
-                }
+                var fis = getFields(type);
+                var count = fis.Count;
                 int seek = count * 4;
                 for (int i = 0; i < count; i++)
                 {
@@ -265,6 +272,7 @@ namespace TcpLibrary.Common
         }
         public static byte[] ToBytes(Type type, object obj, string coding = DefaultEncoding)
         {
+
             if (base_exporters_table.ContainsKey(type))
                 return base_exporters_table[type](obj, coding);
             else if (type.IsEnum)
@@ -291,7 +299,6 @@ namespace TcpLibrary.Common
                 List<byte> data = new List<byte>();
                 foreach (FieldInfo fi in getFields(type))
                 {
-                    if (isExclude(fi)) continue;
                     var bytes = ToBytes(fi.FieldType, fi.GetValue(obj), coding);
                     if (fi.FieldType == typeof(int) || fi.FieldType.IsEnum)
                         header.AddRange(bytes);
@@ -309,14 +316,28 @@ namespace TcpLibrary.Common
                 return null;
             }
         }
-        private static FieldInfo[] getFields(Type type)
+        private static IList<FieldInfo> getFields(Type type)
         {
+
             if (!base_fieldinfo_table.ContainsKey(type))
             {
-                var tfis = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                base_fieldinfo_table.Add(type, tfis);
+                IList<FieldInfo> finaltfis = new List<FieldInfo>();
+                foreach (var item in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+                {
+                    if (!isExclude(item))
+                        finaltfis.Add(item);
+                }
+                lock (base_fieldinfo_table)
+                {
+                    try
+                    {
+                        base_fieldinfo_table.Add(type, finaltfis);
+                    }
+                    catch (ArgumentException) { }
+                }
             }
             return base_fieldinfo_table[type];
         }
+
     }
 }

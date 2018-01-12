@@ -10,7 +10,7 @@ namespace Client.Packet
     public class TextPacket : PacketBase, IPacket
     {
         public TextPacket() { _Encoding = Encoding.UTF8; }
-        public string Text { get; set; } = string.Empty;
-        public string[] Strs { get; set; } = new string[0];
+        public string Text = string.Empty;
+        public string[] Strs = new string[0];
     }
 }
