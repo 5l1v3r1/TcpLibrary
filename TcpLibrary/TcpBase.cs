@@ -32,7 +32,7 @@ namespace TcpLibrary
                 var methodInfo = router.Action.GetType().GetMethod("Invoke");
                 var paramInfo = methodInfo.GetParameters()[0].ParameterType;
                 
-                var message = paramInfo.Assembly.CreateInstance(paramInfo.FullName);
+                var message = Activator.CreateInstance(paramInfo);
                 var message_type = message.GetType();
                 message_type.GetField("Socket").SetValue(message, sender);
                 message_type.GetField("Packet").SetValue(message, _packet);
